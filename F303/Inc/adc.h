@@ -52,7 +52,9 @@
 /* USER CODE END Includes */
 
 /* USER CODE BEGIN Private defines */
-
+   enum {ADC_BUFFRT_LENGTH = 10};
+   extern uint16_t ADCBuffer[ADC_BUFFRT_LENGTH];
+   extern uint16_t ADCBuffer2[ADC_BUFFRT_LENGTH];
 /* USER CODE END Private defines */
 
 extern void _Error_Handler(char *, int);
@@ -60,7 +62,9 @@ extern void _Error_Handler(char *, int);
 void MX_ADC2_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
+void Activate_ADC(void);
+void adc_start(void);
+void adc_stop(void);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

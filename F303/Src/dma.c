@@ -40,7 +40,7 @@
 #include "dma.h"
 
 /* USER CODE BEGIN 0 */
-
+#include "adc.h"
 /* USER CODE END 0 */
 
 /*----------------------------------------------------------------------------*/
@@ -68,7 +68,63 @@ void MX_DMA_Init(void)
 }
 
 /* USER CODE BEGIN 2 */
+/**
+  * @brief  This function configures DMA for transfer of data from ADC
+  * @param  None
+  * @retval None
+  */
+void Configure_DMA_ADC2(uint32_t *DMATransferData, uint32_t TransferDataSIZE)
+{
+  /*## Configuration of NVIC #################################################*/
+  /* Configure NVIC to enable DMA interruptions */
+  //NVIC_SetPriority(DMA1_Channel2_IRQn, 1); /* DMA IRQ lower priority than ADC IRQ */
+  //NVIC_EnableIRQ(DMA1_Channel2_IRQn);
 
+  /*## Configuration of DMA ##################################################*/
+  /* Enable the peripheral clock of DMA */
+  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
+
+  /* Configure the DMA transfer */
+  /*  - DMA transfer in circular mode to match with ADC configuration:        */
+  /*    DMA unlimited requests.                                               */
+  /*  - DMA transfer from ADC without address increment.                      */
+  /*  - DMA transfer to memory with address increment.                        */
+  /*  - DMA transfer from ADC by half-word to match with ADC configuration:   */
+  /*    ADC resolution 12 bits.                                               */
+  /*  - DMA transfer to memory by half-word to match with ADC conversion data */
+  /*    buffer variable type: half-word.                                      */
+  LL_DMA_ConfigTransfer(DMA1,
+                        LL_DMA_CHANNEL_2,
+                        LL_DMA_DIRECTION_PERIPH_TO_MEMORY |
+                        LL_DMA_MODE_CIRCULAR              |
+                        LL_DMA_PERIPH_NOINCREMENT         |
+                        LL_DMA_MEMORY_INCREMENT           |
+                        LL_DMA_PDATAALIGN_HALFWORD        |
+                        LL_DMA_MDATAALIGN_HALFWORD        |
+                        LL_DMA_PRIORITY_HIGH               );
+
+  /* Set DMA transfer addresses of source and destination */
+  LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_2,
+                         LL_ADC_DMA_GetRegAddr(ADC2, LL_ADC_DMA_REG_REGULAR_DATA),
+                         (uint32_t)DMATransferData,
+                         LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
+
+  /* Set DMA transfer size */
+  LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_2, TransferDataSIZE);
+
+  /* Enable DMA transfer interruption: transfer complete */
+  //LL_DMA_EnableIT_TC(DMA1 ,LL_DMA_CHANNEL_2);
+
+  /* Enable DMA transfer interruption: half transfer */
+  //LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_2);
+
+  /* Enable DMA transfer interruption: transfer error */
+  //LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_2);
+
+  /*## Activation of DMA #####################################################*/
+  /* Enable the DMA transfer */
+  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_2);
+}
 /* USER CODE END 2 */
 
 /**

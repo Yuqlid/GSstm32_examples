@@ -62,7 +62,7 @@ extern void _Error_Handler(char*, int);
 void MX_DMA_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
+void Configure_DMA_ADC2(uint32_t *DMATransferData, uint32_t TransferDataSIZE);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

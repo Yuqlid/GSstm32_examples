@@ -129,6 +129,8 @@ int main(void)
   //printf("Build: %s %s\n",__DATE__,__TIME__);
 
 
+  Activate_ADC();
+  adc_start();
   /* USER CODE END 2 */
 
   /* Infinite loop */
