@@ -108,10 +108,12 @@ int main(void)
   while (1)
   {
   /* USER CODE END WHILE */
+  /* USER CODE BEGIN 3 */
     LL_mDelay(500);
     LL_GPIO_TogglePin(GPIOB, LL_GPIO_PIN_5);
-  /* USER CODE BEGIN 3 */
-
+    LL_GPIO_TogglePin(GPIOB, LL_GPIO_PIN_0);
+    LL_GPIO_TogglePin(GPIOA, LL_GPIO_PIN_2);
+    LL_GPIO_TogglePin(GPIOA, LL_GPIO_PIN_3);
   }
   /* USER CODE END 3 */
 
