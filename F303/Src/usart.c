@@ -43,7 +43,8 @@
 #include "gpio.h"
 
 /* USER CODE BEGIN 0 */
-
+static USART_Buffer_t* pUSART_Buf;
+USART_Buffer_t USARTx_Buf;
 /* USER CODE END 0 */
 
 /* USART1 init function */
@@ -68,6 +69,10 @@ void MX_USART1_UART_Init(void)
   GPIO_InitStruct.Alternate = LL_GPIO_AF_7;
   LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+  /* USART1 interrupt Init */
+  NVIC_SetPriority(USART1_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
+  NVIC_EnableIRQ(USART1_IRQn);
+
   USART_InitStruct.BaudRate = 230400;
   USART_InitStruct.DataWidth = LL_USART_DATAWIDTH_8B;
   USART_InitStruct.StopBits = LL_USART_STOPBITS_1;
@@ -89,6 +94,243 @@ void MX_USART1_UART_Init(void)
 
 /* USER CODE BEGIN 1 */
 
+/**************************************************************************/
+/*!
+    Check UART TX Buffer Empty.
+*/
+/**************************************************************************/
+bool USART_TXBuffer_FreeSpace(USART_Buffer_t* USART_buf)
+{
+    /* Make copies to make sure that volatile access is specified. */
+    unsigned int tempHead = (USART_buf->TX_Head + 1) & (UART_BUFSIZE-1);
+    unsigned int tempTail = USART_buf->TX_Tail;
+
+    /* There are data left in the buffer unless Head and Tail are equal. */
+    return (tempHead != tempTail);
+}
+
+/**************************************************************************/
+/*!
+    Put Bytedata with Buffering.
+*/
+/**************************************************************************/
+bool USART_TXBuffer_PutByte(USART_Buffer_t* USART_buf, uint8_t data)
+{
+
+    unsigned int tempTX_Head;
+    bool TXBuffer_FreeSpace;
+
+    TXBuffer_FreeSpace = USART_TXBuffer_FreeSpace(USART_buf);
+
+
+    if(TXBuffer_FreeSpace)
+    {
+        tempTX_Head = USART_buf->TX_Head;
+
+        __disable_irq();
+        USART_buf->TX[tempTX_Head]= data;
+        /* Advance buffer head. */
+        USART_buf->TX_Head = (tempTX_Head + 1) & (UART_BUFSIZE-1);
+        __enable_irq();
+
+        /* Enable TXE interrupt. */
+        USART1->CR1 |= USART_CR1_TXEIE;
+    }
+    return TXBuffer_FreeSpace;
+}
+
+/**************************************************************************/
+/*!
+    Check UART RX Buffer Empty.
+*/
+/**************************************************************************/
+bool USART_RXBufferData_Available(USART_Buffer_t* USART_buf)
+{
+    /* Make copies to make sure that volatile access is specified. */
+    unsigned int tempHead = pUSART_Buf->RX_Head;
+    unsigned int tempTail = pUSART_Buf->RX_Tail;
+
+    /* There are data left in the buffer unless Head and Tail are equal. */
+    return (tempHead != tempTail);
+}
+
+/**************************************************************************/
+/*!
+    Get Bytedata with Buffering.
+*/
+/**************************************************************************/
+uint8_t USART_RXBuffer_GetByte(USART_Buffer_t* USART_buf)
+{
+    uint8_t ans;
+
+    __disable_irq();
+    ans = (pUSART_Buf->RX[pUSART_Buf->RX_Tail]);
+
+    /* Advance buffer tail. */
+    pUSART_Buf->RX_Tail = (pUSART_Buf->RX_Tail + 1) & (UART_BUFSIZE-1);
+
+    __enable_irq();
+
+    return ans;
+}
+
+/**************************************************************************/
+/*!
+    High Level function.
+*/
+/**************************************************************************/
+/* Send 1 character */
+inline void putch(uint8_t data)
+{
+#if defined(UART_INTERRUPT_MODE)
+    /* Interrupt Version */
+    while(!USART_TXBuffer_FreeSpace(pUSART_Buf));
+    USART_TXBuffer_PutByte(pUSART_Buf,data);
+#else
+    /* Polling version */
+    while (!(USART1->ISR & USART_ISR_TXE));
+    USART1->TDR = data;
+#endif
+}
+
+/**************************************************************************/
+/*!
+    High Level function.
+*/
+/**************************************************************************/
+/* Receive 1 character */
+uint8_t getch(void)
+{
+#if defined(UART_INTERRUPT_MODE)
+    if (USART_RXBufferData_Available(pUSART_Buf))  return USART_RXBuffer_GetByte(pUSART_Buf);
+    else                                           return false;
+#else
+    /* Polling version */
+    while (!(USART1->ISR & USART_ISR_RXNE));
+    return (uint8_t)(USART1->RDR);
+#endif
+}
+
+/**************************************************************************/
+/*!
+    High Level function.
+*/
+/**************************************************************************/
+/* Return 1 if key pressed */
+uint8_t keypressed(void)
+{
+#if defined(UART_INTERRUPT_MODE)
+    return (USART_RXBufferData_Available(pUSART_Buf));
+#else
+    return (USART1->ISR & USART_ISR_RXNE);
+#endif
+}
+
+/**************************************************************************/
+/*!
+    High Level function.
+*/
+/**************************************************************************/
+/* Send a string */
+void cputs(char *s)
+{
+    while (*s)
+    putch(*s++);
+}
+
+/**************************************************************************/
+/*!
+    High Level function.
+*/
+/**************************************************************************/
+/* Receive a string, with rudimentary line editing */
+void cgets(char *s, int bufsize)
+{
+    char *p;
+    int c;
+
+    memset(s, 0, bufsize);
+
+    p = s;
+
+    for (p = s; p < s + bufsize-1;)
+    {
+        /* 20090521Nemui */
+        do{
+            c = getch();
+        }while(c == false);
+        /* 20090521Nemui */
+        switch (c)
+        {
+            case '\r' :
+            case '\n' :
+                putch('\r');
+                putch('\n');
+                *p = '\n';
+            return;
+
+            case '\b' :
+                if (p > s)
+                {
+                  *p-- = 0;
+                  putch('\b');
+                  putch(' ');
+                  putch('\b');
+                }
+            break;
+
+            default :
+                putch(c);
+                *p++ = c;
+            break;
+        }
+    }
+    return;
+}
+
+void UART_Callback(void){
+
+    if(LL_USART_IsActiveFlag_RXNE(USART1) && LL_USART_IsEnabledIT_RXNE(USART1))
+    {
+      /* RXNE flag will be cleared by reading of RDR register (done in call) */
+      /* Call function in charge of handling Character reception *
+       * /
+      /* Advance buffer head. */
+        unsigned int tempRX_Head = ((&USARTx_Buf)->RX_Head + 1) & (UART_BUFSIZE-1);
+
+        /* Check for overflow. */
+        unsigned int tempRX_Tail = (&USARTx_Buf)->RX_Tail;
+        uint8_t data =  USART1->RDR;
+
+        if (tempRX_Head == tempRX_Tail) {
+            /* Overflow MAX size Situation */
+            /* Disable the UART Receive interrupt */
+            USART1->CR1 &= ~(USART_CR1_RXNEIE);
+        }else{
+            (&USARTx_Buf)->RX[(&USARTx_Buf)->RX_Head] = data;
+            (&USARTx_Buf)->RX_Head = tempRX_Head;
+        }
+    }
+
+    if(LL_USART_IsEnabledIT_TXE(USART1) && LL_USART_IsActiveFlag_TXE(USART1))
+    {
+      /* TXE flag will be automatically cleared when writing new data in TDR register */
+      /* Check if all data is transmitted. */
+      unsigned int tempTX_Tail = (&USARTx_Buf)->TX_Tail;
+      if ((&USARTx_Buf)->TX_Head == tempTX_Tail){
+          /* Overflow MAX size Situation */
+          /* Disable the UART Transmit interrupt */
+          USART1->CR1 &= ~(USART_CR1_TXEIE);
+      }else{
+          /* Start transmitting. */
+          uint8_t data = (&USARTx_Buf)->TX[(&USARTx_Buf)->TX_Tail];
+          USART1->TDR = data;
+
+          /* Advance buffer tail. */
+          (&USARTx_Buf)->TX_Tail = ((&USARTx_Buf)->TX_Tail + 1) & (UART_BUFSIZE-1);
+      }
+    }
+}
 /* USER CODE END 1 */
 
 /**

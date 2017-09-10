@@ -96,6 +96,7 @@ NVIC.PriorityGroup=NVIC_PRIORITYGROUP_4
 NVIC.SVCall_IRQn=true\:0\:0\:false\:false\:true
 NVIC.SysTick_IRQn=true\:0\:0\:false\:false\:true
 NVIC.TIM6_DAC1_IRQn=true\:0\:0\:false\:false\:true
+NVIC.USART1_IRQn=true\:0\:0\:false\:false\:true
 NVIC.UsageFault_IRQn=true\:0\:0\:false\:false\:true
 PA10.Locked=true
 PA10.Signal=S_TIM1_CH3

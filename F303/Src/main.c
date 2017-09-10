@@ -126,11 +126,12 @@ int main(void)
   MX_TIM6_Init();
 
   /* USER CODE BEGIN 2 */
-  //printf("Build: %s %s\n",__DATE__,__TIME__);
-
 
   Activate_ADC();
   adc_start();
+  //LL_USART_EnableIT_RXNE(USART1);
+  //LL_USART_EnableIT_TXE(USART1);
+  printf("Build: %s %s\n",__DATE__,__TIME__);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -140,13 +141,15 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-    LL_mDelay(200);
+    LL_mDelay(50);
     ubSend = 0;
     LL_GPIO_TogglePin(GPIOB, LL_GPIO_PIN_5);
     LL_GPIO_TogglePin(GPIOB, LL_GPIO_PIN_0);
     LL_GPIO_TogglePin(GPIOA, LL_GPIO_PIN_2);
     LL_GPIO_TogglePin(GPIOA, LL_GPIO_PIN_3);
-    send_uart();
+    //send_uart();
+    printf("1 %4d,%4d,%4d,%4d,%4d,\n",ADCBuffer2[0],ADCBuffer2[1],ADCBuffer2[2],ADCBuffer2[3],ADCBuffer2[4]);
+    printf("2 %4d,%4d,%4d,%4d,%4d,\n",ADCBuffer2[5],ADCBuffer2[6],ADCBuffer2[7],ADCBuffer2[8],ADCBuffer2[9]);
   }
   /* USER CODE END 3 */
 
