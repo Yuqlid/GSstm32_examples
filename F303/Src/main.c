@@ -51,7 +51,8 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+  const uint8_t uartbuf[] = "hello!\r\n";
+  uint8_t ubSend = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,7 +65,32 @@ void SystemClock_Config(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+void send_uart(void){
+  /* Send characters one per one, until last char to be sent */
+  while (ubSend < sizeof(uartbuf))
+  {
+    /* Wait for TXE flag to be raised */
+    while (!LL_USART_IsActiveFlag_TXE(USART1))
+    {
 
+    }
+
+    /* If last char to be sent, clear TC flag */
+    if (ubSend == (sizeof(uartbuf) - 1))
+    {
+      LL_USART_ClearFlag_TC(USART1);
+    }
+
+    /* Write character in Transmit Data register.
+       TXE flag is cleared by writing data in TDR register */
+    LL_USART_TransmitData8(USART1, uartbuf[ubSend++]);
+  }
+  /* Wait for TC flag to be raised for last char */
+  while (!LL_USART_IsActiveFlag_TC(USART1))
+  {
+
+  }
+}
 /* USER CODE END 0 */
 
 int main(void)
@@ -100,6 +126,8 @@ int main(void)
   MX_TIM6_Init();
 
   /* USER CODE BEGIN 2 */
+  //printf("Build: %s %s\n",__DATE__,__TIME__);
+
 
   /* USER CODE END 2 */
 
@@ -108,12 +136,15 @@ int main(void)
   while (1)
   {
   /* USER CODE END WHILE */
+
   /* USER CODE BEGIN 3 */
-    LL_mDelay(500);
+    LL_mDelay(200);
+    ubSend = 0;
     LL_GPIO_TogglePin(GPIOB, LL_GPIO_PIN_5);
     LL_GPIO_TogglePin(GPIOB, LL_GPIO_PIN_0);
     LL_GPIO_TogglePin(GPIOA, LL_GPIO_PIN_2);
     LL_GPIO_TogglePin(GPIOA, LL_GPIO_PIN_3);
+    send_uart();
   }
   /* USER CODE END 3 */
 

@@ -60,8 +60,8 @@
 void MX_GPIO_Init(void)
 {
 
-  LL_EXTI_InitTypeDef EXTI_InitStruct;
   LL_GPIO_InitTypeDef GPIO_InitStruct;
+  LL_EXTI_InitTypeDef EXTI_InitStruct;
 
   /* GPIO Ports Clock Enable */
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOF);
